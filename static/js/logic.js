@@ -14,39 +14,73 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let link = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
 
-// function for colours
-let depth = feature.geometry.coordinates[2]
+// function for colours - depth
+// depth = feature.geometry.coordinates[2]
 
 function pickColor(depth) {
-    if (depth < 10) return "yellow";
-    else if (depth < 30) return "red";
-    else if (depth < 50) return "green";
-    else if (depth < 70) return "blue";
-    else if (depth < 90) return "pink";
-    else return "red";
-}
+    if (depth < 10) return "springgreen";
+    else if (depth < 30) return "yellow";
+    else if (depth < 50) return "orange";
+    else if (depth < 70) return "coral";
+    else if (depth < 90) return "tomato";
+    else return "crimson"
+};
 
-// marker size
-let mag = feature.properties.mag
-function size(mag) {
-    return Math.sqrt (mag) * 20;
-}
+// marker size - magnitude
+// mag = feature.properties.mag
 
-d3.json(link).then(function(response) {
-    
-    features = response.features;
-    let limit = features.length;
+function setRadius(mag) {
+    return Math.sqrt (mag) * 10
+};
 
-    for (let i = 0; i < limit; i++) {
-        let location = features[i].geo;
-        if (location) {
-            L.circle([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], {
-                color: "black",
-                fillColor: pickColor(depth),
-                radius: size(mag),
+
+// retrieve data and plot
+d3.json(link).then(function(data) {
+
+    L.geoJSON(data, {
+        //markers
+        pointToLayer: function(feature, latlng) {
+            return L.circleMarker(latlng, {
+                radius: setRadius(feature.properties.mag),
+                color: 'black',
+                opacity: 1,
+                fillColor: pickColor(feature.geometry.coordinates[2]),
                 fillOpacity: 0.7,
-            }).bindPopup ("<h3> Place : + feature.properties.place")
-            .addTo(eqMap);
+                weight: 0.3
+            });
+        },
+
+        // popups
+        onEachFeature: function(feature, layer) {
+            layer.bindPopup(`Location: ${feature.properties.place} <br>
+                            Magnitude: ${feature.properties.mag} <br>
+                            Depth: ${feature.geometry.coordinates[2]} km`)
         }
+    }).addTo(eqMap);
+})
+
+// legend
+let legend = L.control({position: "bottomright"});
+
+// details
+legend.onAdd = function() {
+    let div = L.DomUtil.create("div", "info legend"),
+    depth = [-10, 10, 30, 50, 70, 90],
+    colors = ["springgreen", "chartreuse", "gold", "orange", "coral", "tomato"];
+
+    // header
+    div.innerHTML += "Earthquake Depths (km) <br>"
+
+    // add depths/colours
+    for (let i = 0; i < depth.length; i++) {
+        div.innerHTML += '<i style="background' + colors[i+1] + ';"></i>' + 
+                        depth[i] + (depth[i+1] ? '&ndash;' + depth[i+1] + '<br>': '+');
     }
-});
+    return div;
+};
+
+legend.addTo(eqMap);
+
+
+
+  
